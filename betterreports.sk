@@ -1,0 +1,289 @@
+# █▄▄ █▀▀ ▀█▀ ▀█▀ █▀▀ █▀█   █▀█ █▀▀ █▀█ █▀█ █▀█ ▀█▀ █▀
+# █▄█ ██▄  █   █  ██▄ █▀▄   █▀▄ ██▄ █▀▀ █▄█ █▀▄  █  ▄█ beta 0.1
+
+# by PandaDevs
+# Fancy text generator: http://fsymbols.com/generators/tarty/
+
+# Changelog
+# v1.0
+# add report system
+#
+# TODO:
+# add more customizations
+# get report by name
+# utilise lores to include more data
+
+# requires dependecies!
+# skript-yaml, for now.
+
+on script load:
+    send "&f█▄▄ █▀▀ ▀█▀ ▀█▀ █▀▀ █▀█   █▀█ █▀▀ █▀█ █▀█ █▀█ ▀█▀ █▀" to console
+    send "&f█▄█ ██▄  █   █  ██▄ █▀▄   █▀▄ ██▄ █▀▀ █▄█ █▀▄  █  ▄█ beta 0.1" to console
+    send "" to console
+    send "&bCreated by PandaDevs (rentedpanda)" to console
+    send "" to console
+    load yaml "plugins/betterreports/config.yml" as "plugins/betterreports/config.yml"
+    load yaml "plugins/betterreports/reports.yml" as "plugins/betterreports/reports.yml"
+    skript-yaml "plugins/betterreports/config.yml" is empty:
+        send "&bBetter Reports» &cconfig.yml does not exist or is outdated, creating one now..." to console
+        set skript-yaml value "cver" from "plugins/betterreports/config.yml" to 1
+        set skript-yaml value "Logs.Chat" from "plugins/betterreports/config.yml" to true
+        set skript-yaml value "Logs.Commands" from "plugins/betterreports/config.yml" to true
+        set skript-yaml value "Permission.sendReport" from "plugins/betterreports/config.yml" to "br.send"
+        set skript-yaml value "Permission.viewReport" from "plugins/betterreports/config.yml" to "br.view"
+        set skript-yaml value "Permission.actReport" from "plugins/betterreports/config.yml" to "br.act"
+        set skript-yaml value "Permission.notifyReport" from "plugins/betterreports/config.yml" to "br.notify"
+        set skript-yaml value "Messages.Prefix" from "plugins/betterreports/config.yml" to "&cReports»"
+        set skript-yaml value "Messages.reportReceived" from "plugins/betterreports/config.yml" to "&aThank you for your report. Your report was saved. Please save the Report ID for your reference."
+        set skript-yaml value "Messages.reportViewer" from "plugins/betterreports/config.yml" to "&fHere are the details of the report."
+        set skript-yaml value "Messages.errorType.invalidArg" from "plugins/betterreports/config.yml" to "&fThere was an error processing your report. Please try again. &4(error) &7invalid_arg"
+        set skript-yaml value "Messages.errorType.invalidID" from "plugins/betterreports/config.yml" to "&fThere was an error processing your report. Please try again. &4(error) &7invalid_id"
+        set skript-yaml value "Messages.errorType.noPerms" from "plugins/betterreports/config.yml" to "&cI'm sorry, but you do not have permission to perform this command. Please contact the server administrators if you believe that this is in error."
+        save yaml "plugins/betterreports/config.yml"
+        send "&bBetter Reports» &aconfig.yml was successfully created!" to console
+    skript-yaml "plugins/betterreports/reports.yml" is empty:
+        send "&bBetter Reports» &creports.yml does not exist or is outdated, creating one now..." to console
+        set skript-yaml value "rver" from "plugins/betterreports/reports.yml" to 1
+        set skript-yaml value "Reports" from "plugins/betterreports/reports.yml" to ""
+        save yaml "plugins/betterreports/reports.yml"
+        send "&bBetter Reports» &areports.yml was successfully created!" to console
+    send "&bBetter Reports» &aconfig.yml was successfully loaded!" to console
+    send "&bBetter Reports» &areports.yml was successfully loaded!" to console
+
+function getConfig(m: string) :: string:
+    return yaml value "%{_m}%" from "plugins/betterreports/config.yml"
+
+on chat:
+    if yaml value "Logs.Chat" from "plugins/betterreports/config.yml" is true:
+        log "[%now formatted human-readable%] %player%: %message%" to "betterreports/globalchat.log"
+
+on command:
+    if yaml value "Logs.Commands" from "plugins/betterreports/config.yml" is true:
+        log "[%now formatted human-readable%] %player% executed command %command%" to "betterreports/globalcommands.log"
+
+command /sendreport [<offline player>] [<text>]:
+    aliases: /report, /sr
+    description: Report a player for any reason.
+    trigger:
+        set {_sendperm} to getConfig("Permission.sendReport")
+        if player has permission "%{_sendperm}%":
+            set {_prefix} to getConfig("Messages.Prefix")
+            if arg 1 or arg 2 is not set:
+                send "%{_prefix}% &bCorrect Usage: &e/report <player> <reason>"
+                send "%{_prefix}% &eReport a player for any reason."
+            else:
+                set {_id} to random integer between 100000000 and 999999999
+                set skript-yaml value "Reports.R-%{_id}%.Status" from "plugins/betterreports/reports.yml" to "active"
+                set skript-yaml value "Reports.R-%{_id}%.Timestamp" from "plugins/betterreports/reports.yml" to now formatted human-readable
+                set skript-yaml value "Reports.R-%{_id}%.Player" from "plugins/betterreports/reports.yml" to "%arg 1%"
+                set skript-yaml value "Reports.R-%{_id}%.UUID" from "plugins/betterreports/reports.yml" to "%uuid of arg 1%"
+                set skript-yaml value "Reports.R-%{_id}%.reportedBy" from "plugins/betterreports/reports.yml" to "%player%"
+                set skript-yaml value "Reports.R-%{_id}%.Reason" from "plugins/betterreports/reports.yml" to arg 2
+                save yaml "plugins/betterreports/reports.yml"
+                set {_reprec} to getConfig("Messages.reportReceived")
+                send "%{_prefix}% %{_reprec}%"
+                send "&c=================================================="
+                send "&7Report ID: &fR-%{_id}%    &7Status: &factive"
+                send " "
+                send "&7Timestamp: &f%now formatted human-readable%"
+                send "&7Player: &f%arg 1%"
+                send "&7UUID: &f%uuid of arg 1%"
+                send "&7Reported by: &f%player%"
+                send "&7Reason: &f%arg 2%"
+                send "&c=================================================="
+                loop all players:
+                    set {_notifyperm} to getConfig("Permission.notifyReport")
+                    if loop-player has permission "%{_notifyperm}%":
+                        send "%{_prefix}% &fA report has been submitted. <tooltip:View R-%{_id}%><run command:/viewreport R-%{_id}%>&bClick here<reset> &fto view the details." to loop-player
+        else:
+            set {_msg} to getConfig("Messages.errorType.noPerms")
+            send "%{_msg}%" to player
+
+#thank you AsuDev for this snippet here!
+
+function checkForSpecifiedPage(slot: number, guiSize: number, list: objects) :: boolean:
+    set {_counter} and {_format} to 0
+    loop {_list::*}:
+        if {_counter}+1 is between {_slot} and {_slot}+({_guiSize}-1):
+            add 1 to {_format}
+        add 1 to {_counter}
+    if {_format} is 0:
+        return false
+    else:
+        return true
+
+command /viewreport [<string>] [<integer>]:
+    aliases: /vr
+    description: View player reports by ID.
+    trigger:
+        set {_viewperm} to getConfig("Permission.sendReport")
+        if player has permission "%{_viewperm}%":
+            set {_prefix} to getConfig("Messages.Prefix")
+            if arg 1 is not set:
+                send "%{_prefix}% &bCorrect Usage: &e/viewreport <id>"
+                send "%{_prefix}% &eView player reports by ID."
+            else:
+                if arg 1 is "global":
+                    if sender is console:
+                        send "&cThis feature is intended for in-game usage only. Please access the local file instead."
+                    else:
+                        if arg 2 is not set:
+                            make player execute command "/vr global 1"
+                            stop
+                        else:
+                            loop node keys "Reports" from "plugins/betterreports/reports.yml":
+                                add loop-value to {_global::*}
+
+                            #thank you AsuDev for this snippet here! (paginated GUIs)
+
+                            set {_msg2} to getConfig("Messages.errorType.invalidArg")
+                            if arg 2 is less than or equal to 0:
+                                send "%{_msg2}%"
+                                send "&7acceptable parameters: positive nonzero integer"
+                                stop
+                            set {_guiSize} to 36
+                            set {_slot} to ((arg 2 * {_guiSize}) + 1) - {_guiSize}
+                            if checkForSpecifiedPage({_slot}, {_guiSize}, {_global::*}) is false:
+                                close player's inventory
+                                set {_availablePages} to ceil(size of {_global::*}/{_guiSize})
+                                send "%{_msg2}%"
+                                send "&7available pages: &b%{_availablePages}%"
+                                stop
+                            set {_rows} to ({_guiSize}/9)+2
+                            open chest inventory with {_rows} rows named "&4Global Reports - Page %arg 2%" to player
+                    
+                            loop numbers from 36 to 44:
+                                set slot loop-number of player's current inventory to black stained glass pane named "&f "
+                            set slot {_guiSize}+12 of player's current inventory to ("MHF_ArrowLeft" parsed as offline player)'s skull named "&c&l<- PREVIOUS PAGE&r"
+                            set slot {_guiSize}+13 of player's current inventory to red stained clay named "&7Cancel"
+                            set slot {_guiSize}+14 of player's current inventory to ("MHF_ArrowRight" parsed as offline player)'s skull named "&a&lNEXT PAGE ->&r"
+                            set {_counter} and {_format} to 0
+                            loop {_global::*}:
+                                if {_counter}+1 is between {_slot} and {_slot}+({_guiSize}-1):
+                                    set slot {_format} of player's current inventory to paper named "%loop-value%"
+                                    add 1 to {_format}
+                                add 1 to {_counter}
+                else:
+                    if yaml path "Reports.%arg 1%" from "plugins/betterreports/reports.yml" exists:
+                        set {_status} to yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml"
+                        set {_timestamp} to yaml value "Reports.%arg 1%.Timestamp" from "plugins/betterreports/reports.yml"
+                        set {_player} to yaml value "Reports.%arg 1%.Player" from "plugins/betterreports/reports.yml"
+                        set {_uuid} to yaml value "Reports.%arg 1%.UUID" from "plugins/betterreports/reports.yml"
+                        set {_reportedby} to yaml value "Reports.%arg 1%.reportedBy" from "plugins/betterreports/reports.yml"
+                        set {_reason} to yaml value "Reports.%arg 1%.Reason" from "plugins/betterreports/reports.yml"
+                        set {_actionby} to yaml value "Reports.%arg 1%.actionTakenBy" from "plugins/betterreports/reports.yml"
+                        set {_action} to yaml value "Reports.%arg 1%.Action" from "plugins/betterreports/reports.yml"
+                        set {_lastaction} to yaml value "Reports.%arg 1%.lastActionDate" from "plugins/betterreports/reports.yml"
+                        send "%{_prefix}% &fViewing report:"
+                        send "&c=================================================="
+                        send "&7Report ID: &f%arg 1%    &7Status: &f%{_status}%"
+                        send " "
+                        send "&7Timestamp: &f%{_timestamp}%"
+                        send "&7Player: &f%{_player}%"
+                        send "&7UUID: &f%{_uuid}%"
+                        send "&7Reported by: &f%{_reportedby}%"
+                        send "&7Reason: &f%{_reason}%"
+                        send " "
+                        send "&7Action taken by: &f%{_actionby}%"
+                        send "&7Action: &f%{_action}%"
+                        send "&7Last action timestamp: &f%{_lastaction}%"
+                        send "&c=================================================="
+                    else:
+                        set {_msg2} to getConfig("Messages.errorType.invalidArg")
+                        send "%{_msg2}%" to player
+        else:
+            set {_msg} to getConfig("Messages.errorType.noPerms")
+            send "%{_msg}%" to player
+
+on inventory click:
+    name of player's current inventory contains "&4Global Reports - Page "
+    if name of clicked item is "&a&lNEXT PAGE ->&r" or "&c&l<- PREVIOUS PAGE&r":
+        cancel event
+        set {_getCurrentPage} to name of player's current inventory
+        replace all "&4Global Reports - Page " with "" in {_getCurrentPage}
+        set {_getCurrentPage} to {_getCurrentPage} parsed as integer
+        if name of clicked item is "&a&lNEXT PAGE ->&r":
+            add 1 to {_getCurrentPage}
+        else:
+            remove 1 from {_getCurrentPage}
+        if {_getCurrentPage} is 0:
+            close player's inventory
+            send "&cNo more pages to see!"
+            stop
+        make player execute command "/viewreport global %{_getCurrentPage}%"
+    if clicked slot < 36:
+        if clicked item is paper:
+            set {_getid} to "%name of clicked item%"
+            execute player command "/viewreport %{_getid}%"
+            close player's inventory
+    if event-slot is black stained glass pane:
+        cancel event
+    if event-slot is red stained clay:
+        cancel event
+        close player's inventory
+    
+
+command /actreport [<string>] [<text>]:
+    aliases: /ar
+    description: Act on a player report. (staff)
+    trigger:
+        set {_actperm} to getConfig("Permission.actReport")
+        if player has permission "%{_actperm}%":
+            set {_prefix} to getConfig("Messages.Prefix")
+            if arg 1 or arg 2 is not set:
+                send "%{_prefix}% &bCorrect Usage: &e/viewreport <id> <action>"
+                send "%{_prefix}% &eAct on a player report. (staff)"
+                send " "
+                send "%{_prefix}% &bList of actions"
+                send "&factive (!ac), pending review (!pr), insufficent evidence (!ie), to punish (!pu), &fflag for inappropriate report (!fl), closed - other reasons (!cl)"
+            else:
+                if yaml path "Reports.%arg 1%" from "plugins/betterreports/reports.yml" exists:
+                    if arg 2 is "!ac" or "!pr" or "!ie" or "!pu" or "!fl" or "!cl":
+                        if arg 2 is "!pr":
+                            set skript-yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml" to "pending"
+                        else if arg 2 is "!fl":
+                            set skript-yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml" to "flagged"
+                        else if arg 2 is "!ac":
+                            set skript-yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml" to "active"
+                        else:
+                            set skript-yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml" to "closed"
+                        set skript-yaml value "Reports.%arg 1%.actionTakenBy" from "plugins/betterreports/reports.yml" to player
+                        set skript-yaml value "Reports.%arg 1%.Action" from "plugins/betterreports/reports.yml" to arg 2
+                        set skript-yaml value "Reports.%arg 1%.lastActionDate" from "plugins/betterreports/reports.yml" to now formatted human-readable
+                        save yaml "plugins/betterreports/reports.yml"
+                        set {_status} to yaml value "Reports.%arg 1%.Status" from "plugins/betterreports/reports.yml"
+                        set {_timestamp} to yaml value "Reports.%arg 1%.Timestamp" from "plugins/betterreports/reports.yml"
+                        set {_player} to yaml value "Reports.%arg 1%.Player" from "plugins/betterreports/reports.yml"
+                        set {_uuid} to yaml value "Reports.%arg 1%.UUID" from "plugins/betterreports/reports.yml"
+                        set {_reportedby} to yaml value "Reports.%arg 1%.reportedBy" from "plugins/betterreports/reports.yml"
+                        set {_reason} to yaml value "Reports.%arg 1%.Reason" from "plugins/betterreports/reports.yml"
+                        set {_actionby} to yaml value "Reports.%arg 1%.actionTakenBy" from "plugins/betterreports/reports.yml"
+                        set {_action} to yaml value "Reports.%arg 1%.Action" from "plugins/betterreports/reports.yml"
+                        set {_lastaction} to yaml value "Reports.%arg 1%.lastActionDate" from "plugins/betterreports/reports.yml"
+                        send "%{_prefix}% &fYour action &b%arg 2% &fhas been saved. Here are the details:"
+                        send "&c=================================================="
+                        send "&7Report ID: &f%arg 1%    &7Status: &f%{_status}%"
+                        send " "
+                        send "&7Timestamp: &f%{_timestamp}%"
+                        send "&7Player: &f%{_player}%"
+                        send "&7UUID: &f%{_uuid}%"
+                        send "&7Reported by: &f%{_reportedby}%"
+                        send "&7Reason: &f%{_reason}%"
+                        send " "
+                        send "&7Action taken by: &f%{_actionby}%"
+                        send "&7Action: &f%{_action}%"
+                        send "&7Last action timestamp: &f%{_lastaction}%"
+                        send "&c=================================================="
+                        loop all players:
+                            set {_notifyperm} to getConfig("Permission.notifyReport")
+                            if loop-player has permission "%{_notifyperm}%":
+                                send "%{_prefix}% &fReport ID %arg 1% was updated. <run command:/viewreport %arg 1%>&bClick here<reset> &fto view this report." to loop-player
+                    else:
+                        set {_msg2} to getConfig("Messages.errorType.invalidArg")
+                        send "%{_msg2}%" to player
+                else:
+                    set {_msg3} to getConfig("Messages.errorType.invalidID")
+                    send "%{_msg3}%" to player
+        else:
+            set {_msg} to getConfig("Messages.errorType.noPerms")
+            send "%{_msg}%" to player
